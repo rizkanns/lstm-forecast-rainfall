@@ -1,0 +1,30 @@
+data<-chicken
+head(data)
+
+data("chicken" , package="astsa" )
+plot(chicken, xlab="Date", ylab="Price(cent s)", col="darkblue")
+
+data<-chicken
+require(quantmod)
+data<-as.zoo(data) //untuk data time series
+
+x1<-Lag(data, k=1)
+x2<-Lag(data, k=2)
+x3<-Lag(data, k=3)
+x4<-Lag(data, k=4)
+x<-cbind(x1, x2, x3, x4, data)
+
+x<-log(x)
+head(round(x,2))
+x<-x[-(1:4),]
+head(round(x,2))
+
+x<-data.matrix(x)
+range_data<-function(x){(x-min(x))/(max(x)-min(x))}
+min_data<-min(x)
+max_data<-max(x)
+x<-range_data(x)
+
+//prediktor x1-x4, trainingnya y
+//pemanggilan function di range_data min_data, max_data 
+//forescast dibanding data real korelasinya (line 50)

@@ -1,0 +1,46 @@
+r-release yg di download
+r-oldreal itu yang lama
+
+reference:
+analisis data statistik - suhartono
+matrix -> numeric
+frame -> campuran bisa karakter bisa numeric
+
+==coba x==
+x=1:15
+x
+	ntar keluarnya 1 - 15
+class(x) --> untuk typechar
+	ntar keluarnya "integer" / "data.frame" / "matrix"
+mode(x)
+	ntar keluarnya "numeric" 
+dim(x) --> dimension
+	ntar keluarnya baris kolom
+summary(x) --> menampilkan nilai median dll
+head(x) --> menampilkan data sebagian saja
+
+==kalo mau ngubah dataset jd matrix==
+1. nge read dulu
+2. iris <- as.matrix(iris)
+3. check pake class(iris)
+   kalo hasilnya matrix dah bener
+
+==kalo mau hapus kolom dlm matrix==
+1. bikin var baru iris2 biar tau bedanya
+2. iris2 <- data.matrix(iris[,-1]), ntar kolom pertama ilang
+3. kalo mo cek dimensinya pake dim(iris2)
+4. kalo mo cek yg kehapus yg mana head(iris2)
+
+==buat grafik, harus pake dataframe gabole pake matrix==
+data <- read.csv("iris.data", header = FALSE) //ini buat ngeread
+data <- data[,apply(data),2,function(x) all(is.na(x))] //ini nyari missing value
+data[is.na[(data)] <- 0 //ini buat missing value jd 0
+
+library(ggplot2) //buat ngaktivin packagenya
+ggplot(data.frame(data), ses(x = 1:nrow.(data), y = 'V1')) = geom_line() //untuk bikin grafik all data
+ggplot(data.frame(data[1:100,]), ses(x = 1:100, y = 'V1')) = geom_line() //untuk bikin grafik custom data
+
+range_data <- function(data){(data-min(data))} //blm selesai ini
+min_data <- min(data)
+max_data <- max(data)
+data <- range_data(data)

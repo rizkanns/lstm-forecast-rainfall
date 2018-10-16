@@ -1,0 +1,44 @@
+neural network:
+presistence, forecast future
+data input di proses (looping) trus bisa didapetin output yg beda"
+
+1. rnn drop-out
+   -gabisa memproses informasi yang sudah jadi jadi proses berikutnya. tergantung, gasemua rnn bisa
+
+2. lstm (long short term memory)
+   -ada chain proses dia bisa memproses informasi yang udah jadi buat diproses lagi
+   -predict the next word based on the previous one
+   -sequence
+   -"I grew up in France… I speak fluent French" ada gap informasi antara French dan France apabila bukan hanya membaca kata terkahir (look back the sentence)
+   -bisa meghapus dan menambah informasi di dalam cell state dengan direksi dari setruktur gerbang. gerbang ini sebagai tempat pertukaran informasi. di dalam layer cell state ada bilangan biner 0 1, 0 sebagai tanda "let nothing through", 1 sebagai tanda "let everything through"
+   
+   -step by step
+	1. decide information, throw away from cell state or not. keputusannya ditentukan oleh sigmoid layer. ex, kita mau prediksi jk. kan yg dulu digunakan buat prediksi yg skrg. nah ketika yg skrg dah diketahui, buat prediksi yg baru yg dulu bakal dihapus
+	2. decide store information, inside cell state. there are 2 parts
+	   -sigmoid layer "input gate layer" menentukan value apa yang akan diupdate
+	   -tanh layer "creates a vector of new candidate values"
+	3. combine 2 layer untuk dieksekusi dan membuat update informasi inside state
+	4. update the old cell state. drop the information about the old subject, as we decided in the previous steps
+	5. decide what were going to output
+	   -sigmoid layer wihich parts of the cell were going to ouput
+	   -taruh di tanh layer, duplikasi sebanyak jumlah sigmoid gate nya
+
+
+------ paper 1 joint mutual information -----
+
+multivariat time series: pake dua dimensi buat prediksi. variable selection>variable extraction.
+
+
+------------- proposal disertasi ------------
+
+Gejala alam yang terjadi di dunia ini seperti cuaca, iklim dan musim merupakan salah satu faktor yang sangat berpengaruh kepada keberlangsungan kehidupan manusia. Selain memberikan berbagai anugrah bagi petani, nelayan, dsb. gejala alam tersebut juga bisa mendatangkan bahaya atau bahkan menyebabkan terjadinya bencana. diantaranya wabah, penyakit, banjir, angin kencang, tanah longsor, kekeringan, kebakaran, dsb. oleh karena itu data/informasi yang didapatkan saat ini dapat dimanfaatkan untuk memprediksi kemungkinan yang terjadi dan mengurangai terjadinya resiko akibat bencana alam dan melakukan tindakan mitigasi.
+
+oleh karenanya dalam penelitian ini diusulkan sebuah pendekatan baru model penduga curah hujan wilayah Zona Musim di Indonesia melalui kombinasi proses ekstrasi dan seleksi variabel prediktor serta penggunaan long short termmemory (LSTM). Pendekatan yang dimaksud yaitu dengan melibatkan sejumlah fitur cuaca dan iklim dalam ruang lingkup lokal dan global dengan memperhitungkan faktor time-lag (temporal) dan lokasi (spasial). dengan demikian, prediksi curah hujan baik dari segi prediktor yang simultan maupun model LSTM, prediksi yang akan dihasilkan akan lebih akurat sehingga dapat digunakan sebagai informasi perencanaan di berbagai bidang. Pemilihan prediktor dengan hanya melibatkan fitur relevan (signifikan) menjadikan proses komputasi lebih efisien sehingga informasi yang didapat untuk pengambilan keputusan akan didapat lebih cepat.
+
+dppcca ekstraksi fitur gatau kan yg mau dipake yg mana, berrati kan ada dependensi waktu dan pengamatan, makanya pake dpppca.
+pcsuv jangan pake alpha beta
+
+klasifikasi dan forecast time sries utivariet dengan rnn drop out
+implementasi metode seleksi fitur dan lstm untuk forecast data time series
+
+-pseuducode lstm	
