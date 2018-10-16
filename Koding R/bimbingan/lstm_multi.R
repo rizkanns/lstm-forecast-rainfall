@@ -1,3 +1,5 @@
+library(keras)
+install_keras()
 
 data <- read.csv("perak1.csv", header = FALSE)
 data <- read.csv("opt.perak2.csv")
