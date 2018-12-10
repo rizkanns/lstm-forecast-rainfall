@@ -1,0 +1,401 @@
+library(keras)
+##install_keras()
+
+library(tibble)
+data <- read.csv("csv-harian-perak1-ver2.csv", header = TRUE, sep = ",")
+data <- data.matrix(data[,-1])
+data <- data.matrix(data[,-1])
+data <- data.matrix(data[,-1])
+
+data[is.na(data)] <- 0
+head(data)
+plot(data)
+
+library(ggplot2)
+ggplot(data.frame(data), aes(x = 1:nrow(data), y = `Suhu.Minimum`)) + geom_line()
+ggplot(data.frame(data[1:100,]), aes(x = 1:100, y = `NINO12`)) + geom_line()
+
+N = nrow(data)
+p = ncol(data)
+
+mean <- apply(data, 2, mean)
+std <- apply(data, 2, sd)
+data <- scale(data, center = mean, scale = std)
+
+#
+#
+# dari bapaknya
+#
+#
+## split data, training & testing, 80:20, AND convert dataframe to an array
+Ind = sample(N, N*0.8, replace = FALSE) 
+p = ncol(data)
+Y_train = data.matrix(data[Ind, 1])
+X_train  = data.matrix(data[Ind,2:p])
+
+Y_test = data.matrix(data[-Ind, 1])
+X_test  = data.matrix(data[-Ind, 2:p])
+
+k = ncol(X_train)
+
+library(tensorflow)
+library(keras)
+------------------------------------------------
+## create your model,and add layers 
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 60, activation = 'relu', input_shape = k) %>% 
+  layer_dropout(rate = 0.2) %>% 
+  layer_dense(units = 50, activation = 'relu') %>%
+  layer_dropout(rate = 0.2) %>%
+  layer_dense(units = 1, activation = 'sigmoid')
+
+## see your model structure
+summary(model)
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mae",
+  metrics = c('accuracy')
+)
+
+track = model %>% fit(X_train, Y_train, epochs = 2000, batch_size = 20,
+                      callbacks = callback_early_stopping(patience = 2, monitor = 'mae'),
+                      validation_split = 0.3
+)
+plot(track)
+
+##prediction 
+pred <- model %>% predict(X_test, batch_size = 128)
+Y_pred = round(pred)
+# Confusion matrix
+CM = table(Y_pred, Y_test)
+
+# evaluate the model
+evals <- model %>% evaluate(X_test, Y_test, batch_size = 10)
+#
+#
+#dari bapaknya
+#
+#
+
+
+## normalisasi data training
+data<-data.matrix(data)
+data<-data.frame(data)
+
+## data train biasa, split dataset into training (80%) and validation (20%)
+split_data <- sample(2, nrow(data), replace=TRUE, prob=c(0.8,0.2))
+train_data <- data[split_data==1,]
+validation_data <- data[split_data==2,]
+
+## multiple linear regression model
+results <- lm(Suhu.Minimum~NINO4,validation_data)
+summary(results)
+
+## data train dari lstm
+train_data <- data[1:3000,]
+mean <- apply(train_data, 2, mean)
+std <- apply(train_data, 2, sd)
+data <- scale(data, center = mean, scale = std)
+
+## data test dari lstm
+test_data <- data[8001:nrow(data),]
+mean <- apply(test_data, 2, mean)
+std <- apply(test_data, 2, sd)
+data <- scale(data, center = mean, scale = std)
+
+## fungsi generator
+generator <- function(data, lookback, delay, min_index, max_index,
+                      shuffle = FALSE, batch_size = 128, step = step) {
+  if (is.null(max_index))
+    max_index <- nrow(data) - delay - 1
+  i <- min_index + lookback
+  function() {
+    if (shuffle) {
+      rows <- sample(c((min_index+lookback):max_index), size = batch_size)
+    } else {
+      if (i + batch_size >= max_index)
+        i <<- min_index + lookback
+      rows <- c(i:min(i+batch_size, max_index))
+      i <<- i + length(rows)
+    }
+    
+    samples <- array(0, dim = c(length(rows), 
+                                lookback / step,
+                                dim(data)[[-1]]))
+    targets <- array(0, dim = c(length(rows)))
+    
+    for (j in 1:length(rows)) {
+      indices <- seq(rows[[j]] - lookback, rows[[j]], 
+                     length.out = dim(samples)[[2]])
+      samples[j,,] <- data[indices,]
+      targets[[j]] <- data[rows[[j]] + delay,2]
+    }            
+    
+    list(samples, targets)
+  }
+}
+
+lookback = 30
+step = 1
+delay = 1
+batch_size = 128
+
+train_gen <- generator(
+  data,
+  lookback = lookback,
+  delay = delay,
+  min_index = 1,
+  max_index = 3000,
+  shuffle = TRUE,
+  step = step, 
+  batch_size = batch_size
+)
+
+val_gen = generator(
+  data,
+  lookback = lookback,
+  delay = delay,
+  min_index = 3001,
+  max_index = 6000,
+  step = step,
+  batch_size = batch_size
+)
+
+test_gen <- generator(
+  data,
+  lookback = lookback,
+  delay = delay,
+  min_index = 6001,
+  max_index = NULL,
+  step = step,
+  batch_size = batch_size
+)
+
+# How many steps to draw from val_gen in order to see the entire validation set
+val_steps <- (6000 - 3001 - lookback) / batch_size
+
+# How many steps to draw from test_gen in order to see the entire test set
+test_steps <- (nrow(data) - 6001 - lookback) / batch_size
+
+library(tensorflow)
+library(keras)
+
+## create your model,and add layers 
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 60, activation = 'relu', input_shape = k) %>% 
+  layer_dense(units = 50, activation = 'relu') %>%
+  layer_dense(units = 1, activation = 'sigmoid')
+
+## see your model structure
+summary(model)
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mae",
+  metrics = c('accuracy')
+)
+
+track = model %>% fit(X_train, Y_train, epochs = 2000, batch_size = 20,
+                      callbacks = callback_early_stopping(patience = 2, monitor = 'mae'),
+                      validation_split = 0.3
+)
+plot(track)
+
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 60, activation = "relu" , input_shape = k) %>% 
+  layer_dense(units = 50, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mae",
+  metrics = c('accuracy')
+)
+
+track = model %>% fit(X_train, Y_train, epochs = 2000, batch_size = 20,
+                      callbacks = callback_early_stopping(patience = 2, monitor = 'mae'),
+                      validation_split = 0.3
+)
+
+history <- model %>% fit_generator(
+  train_gen,
+  steps_per_epoch = 500,
+  epochs = 1,
+  validation_data = val_gen,
+  validation_steps = val_steps
+)
+
+plot(history)
+
+model <- keras_model_sequential() %>% 
+  layer_gru(units = 145, input_shape = list(NULL, dim(data)[[-1]])) %>% 
+  layer_dense(units = 1)
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mae"
+)
+
+
+history <- model %>% fit_generator(
+  train_gen,
+  steps_per_epoch = 500,
+  epochs = 1,
+  validation_data = val_gen,
+  validation_steps = val_steps
+)
+
+plot(history)
+
+## A FIRST RNN
+model <- keras_model_sequential() %>% 
+  layer_gru(units = 32, dropout = 0.2, recurrent_dropout = 0.2,
+            input_shape = list(NULL, dim(data)[[-1]])) %>% 
+  layer_dense(units = 1)
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mae"
+)
+
+history <- model %>% fit_generator(
+  train_gen,
+  steps_per_epoch = 500,
+  epochs = 1,
+  validation_data = val_gen,
+  validation_steps = val_steps
+)
+
+##  DROPOUT TO FIGHT OVERFITTING
+model <- keras_model_sequential() %>% 
+  layer_lstm(units = 200, dropout = 0.2, recurrent_dropout = 0.2,
+             input_shape = list(NULL, dim(data)[[-1]])) %>% 
+  layer_dense(units = 100, activation = "relu") %>% 
+  layer_dense(units = 1)
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mse"
+)
+
+history <- model %>% fit_generator(
+  train_gen,
+  steps_per_epoch = 500,
+  epochs = 1,
+  validation_data = val_gen,
+  validation_steps = val_steps
+)
+
+## STACKING RECURRENT LAYER
+model <- keras_model_sequential() %>% 
+  layer_gru(units = 32, 
+            dropout = 0.1, 
+            recurrent_dropout = 0.5,
+            return_sequences = TRUE,
+            input_shape = list(NULL, dim(data)[[-1]])) %>% 
+  layer_gru(units = 64, activation = "relu",
+            dropout = 0.1,
+            recurrent_dropout = 0.5) %>% 
+  layer_dense(units = 1)
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mae"
+)
+
+history <- model %>% fit_generator(
+  train_gen,
+  steps_per_epoch = 500,
+  epochs = 1,
+  validation_data = val_gen,
+  validation_steps = val_steps
+)
+
+## the rainfall prediction task.
+model <- keras_model_sequential() %>% 
+  bidirectional(
+    layer_gru(units = 32), input_shape = list(NULL, dim(data)[[-1]])) %>% 
+  layer_dense(units = 1)
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mae"
+)
+
+history <- model %>% fit_generator(
+  train_gen,
+  steps_per_epoch = 500,
+  epochs = 1,
+  validation_data = val_gen,
+  validation_steps = val_steps
+)
+
+## Long short term memory
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 60, activation = 'relu', input_shape = k) %>% 
+  layer_dropout(rate = 0.2) %>% 
+  layer_dense(units = 50, activation = 'relu') %>%
+  layer_dropout(rate = 0.2) %>%
+  layer_dense(units = 1, activation = 'sigmoid')
+
+track = model %>% fit(X_train, Y_train, epochs = 64, batch_size = 10,
+                      callbacks = callback_early_stopping(patience = 1, monitor = 'mse'),
+                      validation_split = 0.05
+)
+plot(track)
+
+model <- keras_model_sequential() %>% 
+  bidirectional(
+    layer_gru(units = 64,activation = "relu"),list(NULL, dim(data)[[-1]]) %>% 
+  layer_dense(units = 1)
+
+
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "mse"
+)
+
+history <- model %>% fit_generator(
+  train_gen,
+  steps_per_epoch = 2000,
+  epochs = 1,
+  validation_data = val_gen,
+  validation_steps = val_steps
+)
+
+plot(history)
+
+prediction.set <- test_gen()[[1]]
+prediction <- predict(model, prediction.set)
+
+plot(prediction)
+
+
+pred_generator <- function(gen) {
+  function() { # wrap it in a function to make it callable
+    gen()[1]  # call the given generator and get the first element (i.e. samples)
+  }
+}
+
+preds <- model %>% 
+  predict_generator(
+    generator = pred_generator(test_gen), # pass test_gen directly to pred_generator without calling it
+    steps = test_steps
+  )
+
+evaluate_generator(model, test_gen, test_steps)
+
+history <- model %>% fit_generator(
+  test_gen,
+  steps_per_epoch = 500,
+  epochs = 1,
+  validation_data = val_gen,
+  validation_steps = val_steps
+)
+
+plot(history)
