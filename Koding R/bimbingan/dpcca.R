@@ -102,12 +102,24 @@ is.square<-function(A)
 
 ## PERHITUNGAN DPPCA BERDASARKAN PASANGAN VAR DAN TIME-LAGS LOKASI JUANDA dan PERAK1 serta antar rainfall
 ## Ini yang sudah benar
-juanda <- read.csv("juanda.csv", header=FALSE)
-juanda_M<-as.matrix(juanda)
-perak1 <- read.csv("perak1.csv", header=FALSE)
+perak1 <- read.csv("csv-harian-perak1.csv", header = TRUE, sep = ",")
+perak1 <- data.matrix(perak1[,-1])
+perak1 <- data.matrix(perak1[,-1])
+perak1 <- data.matrix(perak1[,-1])
+perak1[is.na(perak1)] <- 0
 perak1_M<-as.matrix(perak1)
-perak2 <- read.csv("perak2.csv", header=FALSE)
+perak2 <- read.csv("csv-harian-perak2.csv", header = TRUE, sep = ",")
+perak2 <- data.matrix(perak2[,-1])
+perak2 <- data.matrix(perak2[,-1])
+perak2 <- data.matrix(perak2[,-1])
+perak2[is.na(perak2)] <- 0
 perak2_M<-as.matrix(perak2)
+juanda <- read.csv("csv-harian-juanda.csv", header = TRUE, sep = ",")
+juanda <- data.matrix(juanda[,-1])
+juanda <- data.matrix(juanda[,-1])
+juanda <- data.matrix(juanda[,-1])
+juanda[is.na(juanda)] <- 0
+juanda_M<-as.matrix(juanda)
 gab_3lok <- array( c( juanda_M , perak1_M, perak2_M) , dim = c( nrow(juanda_M) , ncol(juanda_M), 3 ) )
 
 juanda <- data.frame(juanda[-1,])
@@ -121,48 +133,48 @@ head(gab_3lok)
 
 for (k in 6:7)
 {
-rho_M <- array(data = NA, dim=c(13, 12, 3, 3), dimnames = NULL)
-for(lok1 in 1:3) {
-Rainfall <- gab_3lok[,1,lok1]
-for(col in 2:ncol(gab_3lok))
-{
-for(lok2 in 1:3) {
-{
-	Prediktor <- gab_3lok[ ,col,lok2]
-	x <- Prediktor
-	y <- Rainfall
-	rho_M[1, col, lok1, lok2] <- DPCCA_CC(x,y,k)
-	
-	for(t in 1:12)
-	{
-	x <- Prediktor[-(((length(Prediktor)+1)-t):length(Prediktor))]
-	y <- Rainfall[-(1:t)]
-	rho_M[t+1,col, lok1, lok2] <- DPCCA_CC(x,y,k)
-	}
-	
-## Perhitungan dpcca untuk Pasangan Rainfall
-	Prediktor <- gab_3lok[,1,lok2]
-	x <- Prediktor
-	y <- Rainfall
-	if(identical(x,y)==TRUE) {rho_M[1, 1, lok1, lok2] <-1}
-	else {rho_M[1, 1, lok1, lok2] <- DPCCA_CC(x,y,k)}
-	
-	for(t in 1:12)
-	{
-	x <- Prediktor[-(((length(Prediktor)+1)-t):length(Prediktor))]
-	y <- Rainfall[-(1:t)]
-	rho_M[t+1,1,lok1, lok2] <- DPCCA_CC(x,y,k)
-	}
-rownames(rho_M) <- paste('lag ke', 1:13) 
-colnames(rho_M) <- paste('var', 1:12) 
-}
-}
-}
-}
-print(k)
-print(rho_M)
-rho_M.status <- ifelse(abs(rho_M[ , , , ])< 0.04811, 0, 1)
-print(rho_M.status)
+  rho_M <- array(data = NA, dim=c(13, 12, 3, 3), dimnames = NULL)
+  for(lok1 in 1:3)
+  {
+    Rainfall <- gab_3lok[,1,lok1]
+    for(col in 2:ncol(gab_3lok))
+    {
+      for(lok2 in 1:3)
+      {
+        Prediktor <- gab_3lok[ ,col,lok2]
+        x <- Prediktor
+        y <- Rainfall
+        rho_M[1, col, lok1, lok2] <- DPCCA_CC(x,y,k)
+        	
+        for(t in 1:12)
+        {
+        	x <- Prediktor[-(((length(Prediktor)+1)-t):length(Prediktor))]
+        	y <- Rainfall[-(1:t)]
+        	rho_M[t+1,col, lok1, lok2] <- DPCCA_CC(x,y,k)
+        }
+        	
+        ## Perhitungan dpcca untuk Pasangan Rainfall
+        Prediktor <- gab_3lok[,1,lok2]
+        x <- Prediktor
+        y <- Rainfall
+        if(identical(x,y)==TRUE) {rho_M[1, 1, lok1, lok2] <-1}
+        	else {rho_M[1, 1, lok1, lok2] <- DPCCA_CC(x,y,k)}
+        	
+        for(t in 1:12)
+        {
+        	x <- Prediktor[-(((length(Prediktor)+1)-t):length(Prediktor))]
+        	y <- Rainfall[-(1:t)]
+        	rho_M[t+1,1,lok1, lok2] <- DPCCA_CC(x,y,k)
+        }
+        rownames(rho_M) <- paste('lag ke', 1:13) 
+        colnames(rho_M) <- paste('var', 1:12) 
+      }
+    }
+  }
+  print(k)
+  print(rho_M)
+  rho_M.status <- ifelse(abs(rho_M[ , , , ])< 0.04811, 0, 1)
+  print(rho_M.status)
 }
 
 
@@ -262,7 +274,7 @@ antar.lok.dpcca.opt<-array(data=NA, dim=c(nrow(gab_3lok) , ncol=156,3, 3),dimnam
 				if(rho_M.status.opt[t,col,lok1,lok2]==0)
 				{x_lag[ ,t]<- NA}}
 				else{
-				lag <-(t-1)
+				lag <-(t-1)sembara
 				x_lag[ ,t]<- as.matrix(shift(gab_3lok[ ,col,lok1], -lag))
 				if(rho_M.status.opt[t,col,lok1,lok2]==0){x_lag[ ,t]<- NA}}
 				colnames(x_lag) <- (0:(count_t-1))

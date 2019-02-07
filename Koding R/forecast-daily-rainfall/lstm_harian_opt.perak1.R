@@ -35,7 +35,7 @@ k = ncol(X_train)
 library(tensorflow)
 library(keras)
 ------------------------------------------------
-## create your model,and add layers 
+## ann
 model <- keras_model_sequential() 
 model %>% 
   layer_dense(units = 60, activation = 'relu', input_shape = k) %>% 
@@ -44,7 +44,6 @@ model %>%
   layer_dropout(rate = 0.2) %>%
   layer_dense(units = 1, activation = 'sigmoid')
 
-## see your model structure
 summary(model)
 
 model %>% compile(
@@ -54,16 +53,6 @@ model %>% compile(
 )
 
 track = model %>% fit(X_train, Y_train, epochs = 2000, batch_size = 20,
-                      callbacks = callback_early_stopping(patience = 2, monitor = 'mae'),
-                      validation_split = 0.3
+                      callbacks = callback_early_stopping(patience = 2, monitor = 'mae'),                    validation_split = 0.3
 )
 plot(track)
-
-##prediction 
-pred <- model %>% predict(X_test, batch_size = 128)
-Y_pred = round(pred)
-# Confusion matrix
-CM = table(Y_pred, Y_test)
-
-# evaluate the model
-evals <- model %>% evaluate(X_test, Y_test, batch_size = 10)

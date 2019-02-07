@@ -1,20 +1,10 @@
-dir.create("~/Downloads/jena_climate", recursive = TRUE)
-download.file(
-  "https://s3.amazonaws.com/keras-datasets/jena_climate_2009_2016.csv.zip",
-  "~/Downloads/jena_climate/jena_climate_2009_2016.csv.zip"
-)
-unzip(
-  "~/Downloads/jena_climate/jena_climate_2009_2016.csv.zip",
-  exdir = "~/Downloads/jena_climate"
-)
-
-
 library(tibble)
 library(readr)
-
-data_dir <- "~/Downloads/jena_climate"
-fname <- file.path(data_dir, "jena_climate_2009_2016.csv")
-data <- read_csv(fname)
+data <- read.csv("csv-harian-perak2.csv", header = TRUE, sep = ",")
+data <- data.matrix(data[,-1])
+data <- data.matrix(data[,-1])
+data <- data.matrix(data[,-1])
+data[is.na(data)] <- 0
 
 head(data)
 str(data)
@@ -39,8 +29,7 @@ sequence_generator <- function(start) {
 gen <- sequence_generator(10)
 gen()
 
-data <- data.matrix(data[,-1])
-train_data <- data[1:200000,]
+train_data <- data[1:8000,]
 mean <- apply(train_data, 2, mean)
 std <- apply(train_data, 2, sd)
 data <- scale(data, center = mean, scale = std)
@@ -87,7 +76,7 @@ train_gen <- generator(
   lookback = lookback,
   delay = delay,
   min_index = 1,
-  max_index = 200000,
+  max_index = 8000,
   shuffle = TRUE,
   step = step, 
   batch_size = batch_size
@@ -97,8 +86,8 @@ val_gen = generator(
   data,
   lookback = lookback,
   delay = delay,
-  min_index = 200001,
-  max_index = 300000,
+  min_index = 8001,
+  max_index = 9000,
   step = step,
   batch_size = batch_size
 )
@@ -107,17 +96,17 @@ test_gen <- generator(
   data,
   lookback = lookback,
   delay = delay,
-  min_index = 300001,
+  min_index = 9001,
   max_index = NULL,
   step = step,
   batch_size = batch_size
 )
 
 # How many steps to draw from val_gen in order to see the entire validation set
-val_steps <- (300000 - 200001 - lookback) / batch_size
+val_steps <- (9000 - 8001 - lookback) / batch_size
 
 # How many steps to draw from test_gen in order to see the entire test set
-test_steps <- (nrow(data) - 300001 - lookback) / batch_size
+test_steps <- (nrow(data) - 9001 - lookback) / batch_size
 
 library(keras)
 evaluate_naive_method <- function() {
@@ -132,97 +121,6 @@ evaluate_naive_method <- function() {
 }
 
 evaluate_naive_method()
-celsius_mae <- 0.29 * std[[2]]
-
-library(keras)
-## Basic
-model <- keras_model_sequential() %>% 
-  layer_flatten(input_shape = c(lookback / step, dim(data)[-1])) %>% 
-  layer_dense(units = 32, activation = "relu") %>% 
-  layer_dense(units = 1)
-
-model %>% compile(
-  optimizer = optimizer_rmsprop(),
-  loss = "mae"
-)
-
-history <- model %>% fit_generator(
-  train_gen,
-  steps_per_epoch = 500,
-  epochs = 20,
-  validation_data = val_gen,
-  validation_steps = val_steps
-)
-
-plot(history)
-
-## A FIRST RNN sampe sini
-model <- keras_model_sequential() %>% 
-  layer_gru(units = 32, input_shape = list(NULL, dim(data)[[-1]])) %>% 
-  layer_dense(units = 1)
-
-model %>% compile(
-  optimizer = optimizer_rmsprop(),
-  loss = "mae"
-)
-
-history <- model %>% fit_generator(
-  train_gen,
-  steps_per_epoch = 500,
-  epochs = 20,
-  validation_data = val_gen,
-  validation_steps = val_steps
-)
-
-plot(history)
-
-##  DROPOUT TO FIGHT OVERFITTING
-model <- keras_model_sequential() %>% 
-  layer_gru(units = 32, dropout = 0.2, recurrent_dropout = 0.2,
-            input_shape = list(NULL, dim(data)[[-1]])) %>% 
-  layer_dense(units = 1)
-
-model %>% compile(
-  optimizer = optimizer_rmsprop(),
-  loss = "mae"
-)
-
-history <- model %>% fit_generator(
-  train_gen,
-  steps_per_epoch = 500,
-  epochs = 40,
-  validation_data = val_gen,
-  validation_steps = val_steps
-)
-
-plot(history)
-
-## STACKING RECURRENT LAYER
-model <- keras_model_sequential() %>% 
-  layer_gru(units = 32, 
-            dropout = 0.1, 
-            recurrent_dropout = 0.5,
-            return_sequences = TRUE,
-            input_shape = list(NULL, dim(data)[[-1]])) %>% 
-  layer_gru(units = 64, activation = "relu",
-            dropout = 0.1,
-            recurrent_dropout = 0.5) %>% 
-  layer_dense(units = 1)
-
-model %>% compile(
-  optimizer = optimizer_rmsprop(),
-  loss = "mae"
-)
-
-history <- model %>% fit_generator(
-  train_gen,
-  steps_per_epoch = 500,
-  epochs = 40,
-  validation_data = val_gen,
-  validation_steps = val_steps
-)
-
-plot(history)
 
 ## bidirectional rnn
 library(keras)
@@ -264,25 +162,25 @@ history <- model %>% fit(
 
 plot(history)
 
-## the temperature prediction task.
-model <- keras_model_sequential() %>% 
-  bidirectional(
-    layer_gru(units = 32), input_shape = list(NULL, dim(data)[[-1]])
-  ) %>% 
-  layer_dense(units = 1)
 
-model %>% compile(
-  optimizer = optimizer_rmsprop(),
-  loss = "mae"
-)
+## prediction
+Ind = sample(N, N*0.8, replace = FALSE) 
+Y_train = data.matrix(data[Ind, 1])
+X_train  = data.matrix(data[Ind,2:p])
 
-history <- model %>% fit_generator(
-  train_gen,
-  steps_per_epoch = 500,
-  epochs = 40,
-  validation_data = val_gen,
-  validation_steps = val_steps
-)
+Y_test = data.matrix(data[-Ind, 1])
+X_test  = data.matrix(data[-Ind, 2:p])
 
-plot(history)
-  
+k = ncol(X_train)
+
+## pred
+pred <- model %>% predict(X_test, batch_size = 128)
+Y_pred = round(pred)
+
+# Confusion matrix
+CM = table(Y_pred, Y_test)
+
+# evaluate the model
+evals <- model %>% evaluate(X_test, Y_test, batch_size = 10)
+
+accuracy = evals[2][[1]]* 100
